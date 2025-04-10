@@ -450,6 +450,7 @@ export class PoeApi extends EventEmitter {
 
             requestHeaders['poe-tag-id'] = crypto.createHash('md5').update(baseString).digest('hex');
 
+            //BROKEN
             const response = await this.client.post(`/api/${path}`, JSON.parse(payload), { 
                 headers: requestHeaders,
                 maxRedirects: 5,
