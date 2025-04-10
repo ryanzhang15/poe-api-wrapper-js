@@ -113,6 +113,9 @@ class PoeApi:
                 sleep(1)
     
     def send_request(self, path: str, query_name: str="", variables: dict={}, file_form: list=[], knowledge: bool=False, ratelimit: int = 0):
+
+        print("Called send_request, query_name is ", query_name)
+
         if ratelimit > 0:
             logger.warning(f"Waiting queue {ratelimit}/2 to avoid rate limit")
             sleep(random.randint(2, 3))

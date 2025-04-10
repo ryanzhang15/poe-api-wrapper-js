@@ -1,4 +1,6 @@
 import axios from 'axios';
+axios.defaults.withCredentials = true;
+
 import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import * as cheerio from 'cheerio';
@@ -62,22 +64,6 @@ const SubscriptionsMutation = {
         {"subscriptionName":"chatModalStateChanged","query":null,"queryHash":"f641bc122ac6a31d466c92f6c724343688c2f679963b7769cb07ec346096bfe7"}]
 };
 
-// GraphQL query for subscription
-const SUBSCRIPTIONS_MUTATION = {
-    query: `
-        mutation SubscriptionsMutation {
-            subscriptions {
-                id
-                name
-                type
-                status
-                createdAt
-                updatedAt
-            }
-        }
-    `
-};
-
 export class PoeApi extends EventEmitter {
     /**
      * Create a new PoeApi instance
@@ -85,7 +71,7 @@ export class PoeApi extends EventEmitter {
      * @param {string} p_lat - The p-lat token from poe.com
      * @param {string} [proxy] - Optional proxy URL
      */
-    constructor(p_b, p_lat, proxy = null) {
+    constructor(p_b, p_lat, formkey, proxy = null) {
         super();
         if (!p_b || !p_lat) {
             throw new Error('Please provide valid p-b and p-lat tokens');
@@ -95,7 +81,7 @@ export class PoeApi extends EventEmitter {
             'p-b': p_b,
             'p-lat': p_lat
         };
-        this.formkey = '';
+        this.formkey = formkey;
         this.wsConnecting = false;
         this.wsConnected = false;
         this.wsError = false;
@@ -111,13 +97,16 @@ export class PoeApi extends EventEmitter {
 
         this.client = axios.create({
             baseURL: BASE_URL,
-            headers: {
-                ...HEADERS,
-                'Cookie': `p-b=${p_b}; p-lat=${p_lat}`
-            }
+            headers: HEADERS,
+            withCredentials: true
+        });
+        this.client.interceptors.request.use(config => {
+            config.headers['Cookie'] = `p-b=${p_b}; p-lat=${p_lat}; __cf_bm=w9660I.jl.DTiTbH0ay4gxU7nc6Yy9fH3DE8n.Gx_T8-1744257655-1.0.1.1-0koqivuhwBMVWtdDbhIMFdS12GZWpzGbowP8lCx6g5cB1dUtoiqovD8h9gj8uo6PWbK3AA3gCHSQl.xrKCv7G9DsjzISizgCXY5ekHXHayw; cf_clearance=2_0CsuWysxMQKa2PGpKLSks1IilnFdtpCt.LDnnb3aM-1744257656-1.2.1.1-OPimVAEzBE8KwieEHFI5QNFGxwIhbe7rOzQWFeO1t25QTexBD6eZF9q4iwKN0_r0poGdavxngGhAaFG6em1Ih59nzNVYgYVxRg8yFK8mO5KT9f6AfJorz_eelFWjkpC75H_8IV.GPnvC0aCn4aieKnfv8Stf_UXH8Ll_sOXlfHQ6J38cISyJfNnz3xJyA.jazmx9AoYahS1NlX.9M4iIOoIOe923BLctBqCUr5eBSpyqyacEtehVo71OlnznR9p9wraTSbx1eQDnHM0C.0jT6o6LuuyBQD9trbG1aO_vgcuJqtlmV3rBMtN4Ye4hWO31fSeTZj.w1WyH6G2x8mb88SCifPFhMRdo41V1pf6xjB4`;
+            return config;
         });
 
         this.connectWebSocket();
+
     }
 
     async initApp(src) {
@@ -162,6 +151,7 @@ export class PoeApi extends EventEmitter {
 
     async getChannelSettings() {
         try {
+            
             const response = await this.client.get('/api/settings', {
                 headers: HEADERS,
                 maxRedirects: 5,
@@ -437,9 +427,9 @@ export class PoeApi extends EventEmitter {
         let statusCode = 0;
 
         try {
-            const payload = this.generatePayload(queryName, variables);
+            let payload = this.generatePayload(queryName, variables);
             const baseString = payload + this.formkey + "4LxgHM6KpFqokX0Ox";
-            let headers = { 'Content-Type': 'application/json' };
+            let requestHeaders = { 'Content-Type': 'application/json' };
 
             if (fileForm.length > 0) {
                 const fields = { queryInfo: payload };
@@ -455,13 +445,33 @@ export class PoeApi extends EventEmitter {
                     formData.append(key, value);
                 }
                 payload = formData;
-                headers = { 'Content-Type': 'multipart/form-data' };
+                requestHeaders = { 'Content-Type': 'multipart/form-data' };
             }
 
-            headers['poe-tag-id'] = crypto.createHash('md5').update(baseString).digest('hex');
+            requestHeaders['poe-tag-id'] = crypto.createHash('md5').update(baseString).digest('hex');
 
-            const response = await this.client.post(`${BASE_URL}/api/${path}`, payload, { headers : headers });
+            const response = await this.client.post(`/api/${path}`, JSON.parse(payload), { 
+                headers: requestHeaders,
+                maxRedirects: 5,
+                timeout: 30000,
+                withCredentials: true
+            }).catch(error => {
+                console.log(error.response.status);
+                console.log(error.response.data);
+                console.log(error.request._header);
+                throw error;
+            });
             statusCode = response.status;
+
+            // const response = await fetch(`${BASE_URL}/api/${path}`, {
+            //     method: 'POST',
+            //     headers: {...requestHeaders, ...HEADERS},
+            //     body: payload,
+            //     credentials: 'include'
+            // });
+            // statusCode = response.status;
+
+
 
             if (statusCode === 403 && rateLimit < 2) {
                 console.warn(`Received 403 status code, retrying... (attempt ${rateLimit + 1}/2)`);
