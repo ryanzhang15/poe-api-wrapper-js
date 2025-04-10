@@ -1,0 +1,28 @@
+{
+  "name": "poe-api-wrapper",
+  "version": "1.0.0",
+  "description": "A Node.js wrapper for the Poe.com API",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "poe",
+    "api",
+    "chatbot",
+    "ai",
+    "chatgpt",
+    "claude"
+  ],
+  "author": "",
+  "license": "GNU GPLv3",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "ws": "^8.16.0",
+    "dotenv": "^16.4.5",
+    "cheerio": "^1.0.0-rc.12",
+    "jsdom": "^24.0.0",
+    "quickjs-emscripten": "^0.25.0"
+  }
+} 
