@@ -80,6 +80,4 @@ new PoeApi(p_b, p_lat, proxy)
 - `message`: Emitted when a message is received
 - `error`: Emitted when an error occurs
 
-## License
 
-MIT
