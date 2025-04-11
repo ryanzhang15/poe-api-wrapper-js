@@ -1,5 +1,5 @@
 import axios from 'axios';
-axios.defaults.withCredentials = true;
+import { createHTTP2Adapter } from 'axios-http2-adapter';
 
 import WebSocket from 'ws';
 import { EventEmitter } from 'events';
@@ -95,10 +95,13 @@ export class PoeApi extends EventEmitter {
         this.wsDomain = null;
         this.tchannelData = null;
 
+        axios.defaults.withCredentials = true;
+        axios.defaults.adapter = createHTTP2Adapter({force: true});
+
         this.client = axios.create({
             baseURL: BASE_URL,
             headers: HEADERS,
-            withCredentials: true
+            withCredentials: true,
         });
         this.client.interceptors.request.use(config => {
             config.headers['Cookie'] = `p-b=${p_b}; p-lat=${p_lat}; __cf_bm=w9660I.jl.DTiTbH0ay4gxU7nc6Yy9fH3DE8n.Gx_T8-1744257655-1.0.1.1-0koqivuhwBMVWtdDbhIMFdS12GZWpzGbowP8lCx6g5cB1dUtoiqovD8h9gj8uo6PWbK3AA3gCHSQl.xrKCv7G9DsjzISizgCXY5ekHXHayw; cf_clearance=2_0CsuWysxMQKa2PGpKLSks1IilnFdtpCt.LDnnb3aM-1744257656-1.2.1.1-OPimVAEzBE8KwieEHFI5QNFGxwIhbe7rOzQWFeO1t25QTexBD6eZF9q4iwKN0_r0poGdavxngGhAaFG6em1Ih59nzNVYgYVxRg8yFK8mO5KT9f6AfJorz_eelFWjkpC75H_8IV.GPnvC0aCn4aieKnfv8Stf_UXH8Ll_sOXlfHQ6J38cISyJfNnz3xJyA.jazmx9AoYahS1NlX.9M4iIOoIOe923BLctBqCUr5eBSpyqyacEtehVo71OlnznR9p9wraTSbx1eQDnHM0C.0jT6o6LuuyBQD9trbG1aO_vgcuJqtlmV3rBMtN4Ye4hWO31fSeTZj.w1WyH6G2x8mb88SCifPFhMRdo41V1pf6xjB4`;
@@ -152,11 +155,11 @@ export class PoeApi extends EventEmitter {
     async getChannelSettings() {
         try {
             
-            const response = await this.client.get('/api/settings', {
+            const response = await this.client.get(`${BASE_URL}/api/settings`, {
                 headers: HEADERS,
                 maxRedirects: 5,
                 timeout: 30000
-            });
+          });
             
             const responseJson = response.data;
             this.wsDomain = `tch${Math.floor(Math.random() * 1e6)}`.slice(0, 11);
@@ -420,6 +423,7 @@ export class PoeApi extends EventEmitter {
     }
 
     async sendRequest(path, queryName = "", variables = {}, fileForm = [], knowledge = false, rateLimit = 0) {
+        
         if (rateLimit > 0) {
             console.warn(`Waiting queue ${rateLimit}/2 to avoid rate limit`);
             await new Promise(resolve => setTimeout(resolve, randomInt(2000, 3000)));
@@ -450,8 +454,12 @@ export class PoeApi extends EventEmitter {
 
             requestHeaders['poe-tag-id'] = crypto.createHash('md5').update(baseString).digest('hex');
 
+            // payload = {"queryName":"SubscriptionsMutation","variables":{"subscriptions":[{"subscriptionName":"messageAdded","query":null,"queryHash":"993dcce616ce18788af3cce85e31437abf8fd64b14a3daaf3ae2f0e02d35aa03"},{"subscriptionName":"messageCancelled","query":null,"queryHash":"14647e90e5960ec81fa83ae53d270462c3743199fbb6c4f26f40f4c83116d2ff"},{"subscriptionName":"messageDeleted","query":null,"queryHash":"91f1ea046d2f3e21dabb3131898ec3c597cb879aa270ad780e8fdd687cde02a3"},{"subscriptionName":"messageRead","query":null,"queryHash":"8c80ca00f63ad411ba7de0f1fa064490ed5f438d4a0e60fd9caa080b11af9495"},{"subscriptionName":"messageCreated","query":null,"queryHash":"47ee9830e0383f002451144765226c9be750d6c2135e648bced2ca7efc9d8a67"},{"subscriptionName":"messageStateUpdated","query":null,"queryHash":"117a49c685b4343e7e50b097b10a13b9555fedd61d3bf4030c450dccbeef5676"},{"subscriptionName":"messageAttachmentAdded","query":null,"queryHash":"65798bb2f409d9457fc84698479f3f04186d47558c3d7e75b3223b6799b6788d"},{"subscriptionName":"messageFollowupActionAdded","query":null,"queryHash":"d2e770beae7c217c77db4918ed93e848ae77df668603bc84146c161db149a2c7"},{"subscriptionName":"messageMetadataUpdated","query":null,"queryHash":"71c247d997d73fb0911089c1a77d5d8b8503289bc3701f9fb93c9b13df95aaa6"},{"subscriptionName":"messageTextUpdated","query":null,"queryHash":"800eea48edc9c3a81aece34f5f1ff40dc8daa71dead9aec28f2b55523fe61231"},{"subscriptionName":"jobStarted","query":null,"queryHash":"17099b40b42eb9f7e32323aa6badc9283b75a467bc8bc40ff5069c37d91856f6"},{"subscriptionName":"jobUpdated","query":null,"queryHash":"e8e492bfaf5041985055d07ad679e46b9a6440ab89424711da8818ae01d1a1f1"},{"subscriptionName":"viewerStateUpdated","query":null,"queryHash":"3b2014dba11e57e99faa68b6b6c4956f3e982556f0cf832d728534f4319b92c7"},{"subscriptionName":"unreadChatsUpdated","query":null,"queryHash":"5b4853e53ff735ae87413a9de0bce15b3c9ba19102bf03ff6ae63ff1f0f8f1cd"},{"subscriptionName":"chatTitleUpdated","query":null,"queryHash":"ee062b1f269ecd02ea4c2a3f1e4b2f222f7574c43634a2da4ebeb616d8647e06"},{"subscriptionName":"knowledgeSourceUpdated","query":null,"queryHash":"7de63f89277bcf54f2323008850573809595dcef687f26a78561910cfd4f6c37"},{"subscriptionName":"messagePointLimitUpdated","query":null,"queryHash":"ed3857668953d6e8849c1562f3039df16c12ffddaaac1db930b91108775ee16d"},{"subscriptionName":"chatMemberAdded","query":null,"queryHash":"21ef45e20cc8120c31a320c3104efe659eadf37d49249802eff7b15d883b917b"},{"subscriptionName":"chatSettingsUpdated","query":null,"queryHash":"3b370c05478959224e3dbf9112d1e0490c22e17ffb4befd9276fc62e196b0f5b"},{"subscriptionName":"chatModalStateChanged","query":null,"queryHash":"f641bc122ac6a31d466c92f6c724343688c2f679963b7769cb07ec346096bfe7"}]},"extensions":{"hash":"5a7bfc9ce3b4e456cd05a537cfa27096f08417593b8d9b53f57587f3b7b63e99"}}
+
             //BROKEN
-            const response = await this.client.post(`/api/${path}`, JSON.parse(payload), { 
+            
+            const response = await this.client.post(`${BASE_URL}/api/${path}`, JSON.parse(payload), { 
+            // const response = await this.client.post("https://poe.com/api/gql_POST", payload, { 
                 headers: requestHeaders,
                 maxRedirects: 5,
                 timeout: 30000,
@@ -459,7 +467,6 @@ export class PoeApi extends EventEmitter {
             }).catch(error => {
                 console.log(error.response.status);
                 console.log(error.response.data);
-                console.log(error.request._header);
                 throw error;
             });
             statusCode = response.status;
